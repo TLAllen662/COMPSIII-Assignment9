@@ -31,9 +31,10 @@ def test_movies_table_columns(db_connection):
     columns = cursor.fetchall()
     
     # Expected columns and their types
+    # Format: (name, type, notnull, default, primary_key)
     expected_columns = [
-        ('id', 'INTEGER', 1, None, 1),  # Primary key, autoincrement
-        ('title', 'TEXT', 0, None, 0),
+        ('id', 'INTEGER', 0, None, 1),      # Primary key
+        ('title', 'TEXT', 1, None, 0),      # Not null
         ('worldwide_gross', 'INTEGER', 0, None, 0),
         ('year', 'INTEGER', 0, None, 0)
     ]

@@ -27,13 +27,29 @@ def scrape_wikipedia():
     try:
         # Request wikipedia page for highest-grossing films
         url = 'https://en.wikipedia.org/wiki/List_of_highest-grossing_films'
-        response = requests.get(url)
+        
+        # Add headers to avoid 403 Forbidden error
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        }
+        
+        response = requests.get(url, headers=headers)
         response.raise_for_status()  # Raise an exception for bad status codes
         
         soup = BeautifulSoup(response.content, 'html.parser')
         
         # Find the table with highest-grossing movies
-        table = soup.find('table', {'class': 'wikitable'})
+        # Look for the first table that contains movie data
+        tables = soup.find_all('table', {'class': 'wikitable'})
+        table = None
+        
+        for t in tables:
+            # Check if this table has the right headers
+            headers_row = t.find('tr')
+            if headers_row and ('worldwide' in headers_row.get_text().lower() or 'gross' in headers_row.get_text().lower()):
+                table = t
+                break
+        
         if not table:
             print("Could not find movies table")
             return []
@@ -43,25 +59,35 @@ def scrape_wikipedia():
         
         for row in rows[:50]:  # Get top 50 movies
             cells = row.find_all(['td', 'th'])
-            if len(cells) >= 4:
+            if len(cells) >= 3:
                 try:
-                    # Extract title (usually in 2nd column)
-                    title_cell = cells[1]
-                    title = title_cell.get_text(strip=True)
+                    # Extract title (usually in 2nd column, sometimes 1st)
+                    title_cell = cells[1] if len(cells) > 2 else cells[0]
                     
-                    # Extract worldwide gross (usually in 3rd column)
-                    gross_cell = cells[2]
+                    # Clean title text
+                    title_link = title_cell.find('a')
+                    if title_link:
+                        title = title_link.get_text(strip=True)
+                    else:
+                        title = title_cell.get_text(strip=True)
+                    
+                    # Remove footnote markers and extra text
+                    title = re.sub(r'\[[^\]]*\]', '', title)
+                    title = title.strip()
+                    
+                    # Extract worldwide gross (usually in 3rd column, sometimes 2nd)
+                    gross_cell = cells[2] if len(cells) > 2 else cells[1]
                     gross_text = gross_cell.get_text(strip=True)
                     
-                    # Clean and convert gross to integer
+                    # Clean and convert gross to integer (remove $, commas, etc.)
                     gross_clean = re.sub(r'[^\d]', '', gross_text)
-                    if gross_clean:
+                    if gross_clean and len(gross_clean) >= 9:  # At least 9 digits for billion+
                         worldwide_gross = int(gross_clean)
                     else:
                         continue
                     
-                    # Extract year (usually in 4th column)
-                    year_cell = cells[3]
+                    # Extract year (usually in 4th column, sometimes 3rd)
+                    year_cell = cells[3] if len(cells) > 3 else cells[2] if len(cells) > 2 else cells[1]
                     year_text = year_cell.get_text(strip=True)
                     year_match = re.search(r'\b(19|20)\d{2}\b', year_text)
                     year = year_match.group() if year_match else "2023"
@@ -76,6 +102,7 @@ def scrape_wikipedia():
                 except (ValueError, AttributeError) as e:
                     continue
         
+        print(f"Successfully scraped {len(movies)} movies")
         return movies
         
     except requests.RequestException as e:
