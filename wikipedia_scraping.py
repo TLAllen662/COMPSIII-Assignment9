@@ -28,7 +28,31 @@ connection.close()
 
 print("Database 'movies.db' created successfully!")
 
+def create_movies_table():
+    # Connect to database
+    connection = sqlite3.connect('movies.db')
+    cursor = connection.cursor()
+    
+    # Create table
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS movies (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL,
+        year INTEGER,
+        genre TEXT,
+        director TEXT,
+        rating REAL CHECK(rating >= 0 AND rating <= 10),
+        description TEXT
+    )
+    ''')
+    
+    # Commit and close
+    connection.commit()
+    connection.close()
+    print("Movies table created successfully!")
 
+# Run the function
+create_movies_table()
 
 
 
