@@ -1,11 +1,17 @@
 import sqlite3
+import requests
+from bs4 import BeautifulSoup
 
-#connect to database
-conn = sqlite3.connect('movies.db')
+# Connect to database
+connection = sqlite3.connect('movies.db')
+# request wikipedia page
+response = requests.get('https://en.wikipedia.org/wiki/List_of_American_films_of_2023')
+soup = BeautifulSoup(response.content, 'html.parser')
+title = soup.find('title').text
+print(f"Page Title: {title}")
+cursor = connection.cursor()
 
-cursor = conn.cursor()
-
-#create table
+# Create table
 cursor.execute('''
     CREATE TABLE IF NOT EXISTS movies (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -17,8 +23,8 @@ cursor.execute('''
 ''')
 
 # Commit changes and close connection
-conn.commit()
-conn.close()
+connection.commit()
+connection.close()
 
 print("Database 'movies.db' created successfully!")
 
